@@ -1,6 +1,6 @@
 // main.js
 const Apify = require('apify');
-const { log } = Apify.utils;
+const {log} = Apify.utils;
 
 const LATEST = "LATEST";
 const now = new Date();
@@ -34,9 +34,9 @@ Apify.main(async () => {
                 maxUsageCount: 5,
             },
         },
-        handlePageFunction: async ({ request, $ }) => {
+        handlePageFunction: async ({request, $}) => {
             log.info(`Processing ${request.url}`);
-            const { label } = request.userData;
+            const {label} = request.userData;
             switch (label) {
                 case 'START':
                     const $href = $('.dbody ul').first().find('a').attr('href');
@@ -69,7 +69,7 @@ Apify.main(async () => {
                         firstTable = await extractFirstTableData(firstTbody, $);
                     }
 
-                    // Second Table 
+                    // Second Table
                     const secondIndex = await getTableIndex($
                         , new RegExp(/region(.*)sub(.*)total(.*)epidemiological(.*)links(.*)others(.*)newly(.*)confirmed/g));
                     if (typeof secondIndex === "number") {
@@ -77,7 +77,7 @@ Apify.main(async () => {
                         // infected, infectedByRegion
                         secondTable = await extractSecondTableData(secondTbody, $);
                     }
-                    const { infected, newlyConfirmd, infectedByRegion } = secondTable;
+                    const {infected, newlyConfirmd, infectedByRegion} = secondTable;
 
                     // Third Table
                     const thirdIndex = await getTableIndex($
@@ -86,7 +86,7 @@ Apify.main(async () => {
                         const thirdTbody = $('#content_detail div.tb_contents tbody').eq(thirdIndex);
                         thirdTable = await extractThirdTableData(thirdTbody, $);
                     }
-                    const { deaths, infectedByAgeGroup } = thirdTable;
+                    const {deaths, infectedByAgeGroup} = thirdTable;
 
                     // ADD: infected, newlyConfirmd
                     if (infected) data.infected = infected;
@@ -104,12 +104,11 @@ Apify.main(async () => {
 
                     // Source Date
                     const $sourceDate = $('ul[class="head info"] li:nth-child(1) b').text().trim();
-                    const sourceDate = new Date($sourceDate)
-
+                    const $date = new Date($sourceDate)
                     //ADD: sourceUrl, lastUpdatedAtSource, lastUpdatedAtApify, readMe
                     data.sourceUrl = request.url;
                     data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
-                    data.lastUpdatedAtSource = new Date(Date.UTC(sourceDate.getFullYear(), sourceDate.getMonth(), sourceDate.getDate(), sourceDate.getHours(), sourceDate.getMinutes())).toISOString();
+                    data.lastUpdatedAtSource = new Date(Date.UTC($date.getFullYear(), $date.getMonth(), $date.getDate(), ($date.getHours() - 7), $date.getMinutes())).toISOString();
                     data.readMe = 'https://apify.com/onidivo/covid-kr';
 
                     // Push the data
@@ -135,7 +134,7 @@ Apify.main(async () => {
                     break;
             }
         },
-        handleFailedRequestFunction: async ({ request }) => {
+        handleFailedRequestFunction: async ({request}) => {
             console.log(`Request ${request.url} failed many times.`);
             console.dir(request)
         },
@@ -175,6 +174,7 @@ async function extractFirstTableData(tbody, $) {
     });
     return result;
 }
+
 async function extractSecondTableData(tbody, $) {
 
     let infected = undefined;
@@ -182,7 +182,7 @@ async function extractSecondTableData(tbody, $) {
     const infectedByRegion = [];
 
     $(tbody).find('tr').toArray().forEach((tr, i) => {
-        const { length } = $(tr).find('td');
+        const {length} = $(tr).find('td');
         if (length === 8) {
             const key = $(tr).find('td').first().text().replaceAll()
             const value = $(tr).find('td').first().next().text().replaceAll()
@@ -199,7 +199,7 @@ async function extractSecondTableData(tbody, $) {
             })
         }
     })
-    return { infected, newlyConfirmd, infectedByRegion }
+    return {infected, newlyConfirmd, infectedByRegion}
 }
 
 String.prototype.replaceAll = function () {
@@ -212,7 +212,7 @@ async function extractThirdTableData(tbody, $) {
 
     $(tbody).find('tr').toArray().forEach((tr, i) => {
         let tds = $(tr).find('td');
-        let { length } = tds;
+        let {length} = tds;
         if (length === 6 || length === 7) {
             if (i === 0) return;
             if (i === 1) {
@@ -227,5 +227,5 @@ async function extractThirdTableData(tbody, $) {
             })
         }
     });
-    return { deaths, infectedByAgeGroup };
+    return {deaths, infectedByAgeGroup};
 }
