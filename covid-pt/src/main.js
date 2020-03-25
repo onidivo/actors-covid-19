@@ -64,7 +64,7 @@ Apify.main(async () => {
     data.sourceUrl = 'https://covid19.min-saude.pt/ponto-de-situacao-atual-em-portugal/';
     data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
     data.lastUpdatedAtSource = new Date(Date.UTC(sourceDate.getFullYear(), sourceDate.getMonth(), sourceDate.getDate(), sourceDate.getHours(), sourceDate.getMinutes())).toISOString();
-    data.readMe = 'readMe';
+    data.readMe = 'https://apify.com/onidivo/covid-pt';
     if (!latest) {
         await kvStore.setValue('LATEST', data);
         latest = data;
