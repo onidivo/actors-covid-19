@@ -108,7 +108,7 @@ Apify.main(async () => {
                     //ADD: sourceUrl, lastUpdatedAtSource, lastUpdatedAtApify, readMe
                     data.sourceUrl = request.url;
                     data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
-                    data.lastUpdatedAtSource = new Date(Date.UTC($date.getFullYear(), $date.getMonth(), $date.getDate(), ($date.getHours() - 7), $date.getMinutes())).toISOString();
+                    data.lastUpdatedAtSource = new Date(Date.UTC($date.getFullYear(), $date.getMonth(), $date.getDate(), ($date.getHours() - 9), $date.getMinutes())).toISOString();
                     data.readMe = 'https://apify.com/onidivo/covid-kr';
 
                     // Push the data
