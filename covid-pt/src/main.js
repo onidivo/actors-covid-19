@@ -34,7 +34,7 @@ Apify.main(async () => {
 
         const full_container = $('full-container').first().children();
 
-        const date = full_container.eq(5).find('g').last().text().trim();
+        const date = full_container.find("div:contains(Dados relativos ao boletim da DGS de)").eq(2).find('g').last().text().trim()
         const totalTested = full_container.eq(4).find('g').last().text().replace(/(\n|,| )/g, '');
         const infected = full_container.eq(1).find('g').last().text().replace(/(\n|,| )/g, '');
         const recovered = full_container.eq(2).find('g').last().text().replace(/(\n|,| )/g, '');
@@ -51,7 +51,6 @@ Apify.main(async () => {
     });
 
     let {date, totalTested, infected, recovered, deaths, infectedByRegion} = extracted;
-
     let sourceDate = new Date(formatDate(date));
 
     // ADD: totalTested, infected, recovered, deaths
@@ -60,11 +59,12 @@ Apify.main(async () => {
     let latest = await kvStore.getValue(LATEST);
 
     // ADD: infectedByRegion, lastUpdatedAtApify, lastUpdatedAtSource
-    if (infectedByRegion.length) data.infectedByRegion = infectedByRegion;
+    if (infectedByRegion && infectedByRegion.length) data.infectedByRegion = infectedByRegion;
     data.sourceUrl = 'https://covid19.min-saude.pt/ponto-de-situacao-atual-em-portugal/';
     data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
     if (sourceDate != 'Invalid Date') data.lastUpdatedAtSource = new Date(Date.UTC(sourceDate.getFullYear(), sourceDate.getMonth(), sourceDate.getDate(), sourceDate.getHours(), sourceDate.getMinutes())).toISOString();
     data.readMe = 'https://apify.com/onidivo/covid-pt';
+
     if (!latest) {
         await kvStore.setValue('LATEST', data);
         latest = data;
@@ -85,23 +85,8 @@ Apify.main(async () => {
     console.log('Done.');
 });
 
-function customDate() {
-    return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())).toISOString()
-}
-
 function formatDate(date) {
-    const arr = date.replaceAll('\n', '').trim().split('/');
-    const first = arr[0];
-    arr[0] = arr[1];
-    arr[1] = first;
-    return arr.join('-');
+    const arr = date.replace(/(\n)/g, '').trim().split('/');
+    [a, b, ...others] = [...arr];
+    return Array.from([b, a, ...others]).join('-');
 }
-
-function isTimeToCheckCases() {
-    return now.getHours() === 1 && now.getMinutes() < 5;
-}
-
-String.prototype.replaceAll = function (find, replace) {
-    var str = this;
-    return str.replace(new RegExp(find.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g'), replace);
-};
