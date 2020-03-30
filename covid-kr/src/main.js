@@ -1,6 +1,6 @@
 // main.js
 const Apify = require('apify');
-const {log} = Apify.utils;
+const { log } = Apify.utils;
 
 const LATEST = "LATEST";
 const now = new Date();
@@ -34,9 +34,9 @@ Apify.main(async () => {
                 maxUsageCount: 5,
             },
         },
-        handlePageFunction: async ({request, $}) => {
+        handlePageFunction: async ({ request, $ }) => {
             log.info(`Processing ${request.url}`);
-            const {label} = request.userData;
+            const { label } = request.userData;
             switch (label) {
                 case 'START':
                     const $href = $('.dbody ul').first().find('a').attr('href');
@@ -69,16 +69,6 @@ Apify.main(async () => {
                         firstTable = await extractFirstTableData(firstTbody, $);
                     }
 
-                    // Second Table
-                    const secondIndex = await getTableIndex($
-                        , new RegExp(/region(.*)sub(.*)total(.*)epidemiological(.*)links(.*)others(.*)newly(.*)confirmed/g));
-                    if (typeof secondIndex === "number") {
-                        const secondTbody = $('#content_detail div.tb_contents tbody').eq(secondIndex);
-                        // infected, infectedByRegion
-                        secondTable = await extractSecondTableData(secondTbody, $);
-                    }
-                    const {infected, newlyConfirmd, infectedByRegion} = secondTable;
-
                     // Third Table
                     const thirdIndex = await getTableIndex($
                         , new RegExp(/confirmed(.*)deaths(.*)fatality(.*)/g));
@@ -86,26 +76,24 @@ Apify.main(async () => {
                         const thirdTbody = $('#content_detail div.tb_contents tbody').eq(thirdIndex);
                         thirdTable = await extractThirdTableData(thirdTbody, $);
                     }
-                    const {deaths, infectedByAgeGroup} = thirdTable;
+                    const { infectedByAgeGroup } = thirdTable;
 
-                    // ADD: infected, newlyConfirmd
-                    if (infected) data.infected = infected;
-                    if (newlyConfirmd) data.newlyConfirmd = newlyConfirmd;
-
-                    // ADD: discharged, isolated, deaths, beingTested, testedNegative
+                    // ADD: total, infected, discharged, isolated, deceased, beingTested, testedNegative
                     Object.keys(firstTable).forEach(function (key) {
                         data[key] = firstTable[key];
                     });
 
                     // ADD: deaths,infectedByRegion, infectedByAgeGroup
-                    if (!data.deaths && deaths) data.deaths = deaths;
-                    if (infectedByRegion && infectedByRegion.length) data.infectedByRegion = infectedByRegion;
                     if (infectedByAgeGroup && infectedByAgeGroup.length) data.infectedByAgeGroup = infectedByAgeGroup;
 
                     // Source Date
                     const $sourceDate = $('ul[class="head info"] li:nth-child(1) b').text().trim();
                     const $date = new Date($sourceDate)
+
                     //ADD: sourceUrl, lastUpdatedAtSource, lastUpdatedAtApify, readMe
+                    data.country = 'South Korea';
+                    data.moreData = 'https://api.apify.com/v2/key-value-stores/TMFbhs7qtXpGpeaeP/records/LATEST?disableRedirect=true';
+                    data.historyData = 'https://api.apify.com/v2/datasets/T43VVY5mDBeFMyRcn/items?format=json&clean=1';
                     data.sourceUrl = request.url;
                     data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
                     data.lastUpdatedAtSource = new Date(Date.UTC($date.getFullYear(), $date.getMonth(), $date.getDate(), ($date.getHours() - 9), $date.getMinutes())).toISOString();
@@ -134,7 +122,7 @@ Apify.main(async () => {
                     break;
             }
         },
-        handleFailedRequestFunction: async ({request}) => {
+        handleFailedRequestFunction: async ({ request }) => {
             console.log(`Request ${request.url} failed many times.`);
             console.dir(request)
         },
@@ -144,15 +132,6 @@ Apify.main(async () => {
     await cheerioCrawler.run();
     log.info('Actor finished.');
 });
-
-function isTimeToCheckCases() {
-    return now.getHours() == '1' && now.getMinutes() < 5;
-}
-
-function customDate() {
-    return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())).toISOString()
-}
-
 
 async function getTableIndex($, regex) {
     const tbodys = $('#content_detail div.tb_contents tbody').toArray();
@@ -166,40 +145,22 @@ async function getTableIndex($, regex) {
 
 async function extractFirstTableData(tbody, $) {
     let $tds = $(tbody).find('tr').last().prev().find('td');
-    const fields = ['discharged', 'isolated', 'deaths', 'beingTested', 'testedNegative'];
+    const fields = ['total', 'infected', 'discharged', 'isolated', 'deceased', 'beingTested', 'testedNegative'];
     const result = {}
     fields.forEach((field, i) => {
-        const value = $($tds).eq(i + 3).text().replaceAll();
-        if (value) result[field] = value;
-    });
-    return result;
-}
-
-async function extractSecondTableData(tbody, $) {
-
-    let infected = undefined;
-    let newlyConfirmd = undefined;
-    const infectedByRegion = [];
-
-    $(tbody).find('tr').toArray().forEach((tr, i) => {
-        const {length} = $(tr).find('td');
-        if (length === 8) {
-            const key = $(tr).find('td').first().text().replaceAll()
-            const value = $(tr).find('td').first().next().text().replaceAll()
-            const newly = $(tr).find('td').last().text().replaceAll()
-            if (key.toLowerCase().includes('total')) {
-                infected = value;
-                newlyConfirmd = newly;
+        const value = $($tds).eq(i + 1).text().replaceAll();
+        if (value || value === '0') {
+            result[field] = parseInt(value);
+        }
+        else {
+            if (fields === 'deceased') {
+                result[field] = null;
                 return;
             }
-            infectedByRegion.push({
-                value,
-                region: key,
-                newlyConfirmd: newly
-            })
+            result[field] = 'N/A';
         }
-    })
-    return {infected, newlyConfirmd, infectedByRegion}
+    });
+    return result;
 }
 
 String.prototype.replaceAll = function () {
@@ -212,7 +173,7 @@ async function extractThirdTableData(tbody, $) {
 
     $(tbody).find('tr').toArray().forEach((tr, i) => {
         let tds = $(tr).find('td');
-        let {length} = tds;
+        let { length } = tds;
         if (length === 6 || length === 7) {
             if (i === 0) return;
             if (i === 1) {
@@ -222,10 +183,10 @@ async function extractThirdTableData(tbody, $) {
             if (length === 7) tds = $(tds).slice(1);
             infectedByAgeGroup.push({
                 key: $(tds).eq(0).text().trim(),
-                infected: $(tds).eq(1).text().replaceAll(),
-                deaths: $(tds).eq(3).text().replaceAll(),
+                infected: parseInt($(tds).eq(1).text().replaceAll()),
+                deaths: parseInt($(tds).eq(3).text().replaceAll()),
             })
         }
     });
-    return {deaths, infectedByAgeGroup};
+    return { deaths, infectedByAgeGroup };
 }
