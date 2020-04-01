@@ -1,7 +1,7 @@
 
 Coronavirus stats in the South Korea
 
-Actor gets an actual number of examined and infected people in the South Korea from https://www.cdc.go.kr/board/board.es?mid=&bid=0030
+Actor gets an actual number of examined and infected people in the South Korea from http://ncov.mohw.go.kr/en
 
 Latest data are available at this URL: https://api.apify.com/v2/key-value-stores/TMFbhs7qtXpGpeaeP/records/LATEST?disableRedirect=true.
 
