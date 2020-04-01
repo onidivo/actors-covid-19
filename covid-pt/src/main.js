@@ -35,7 +35,7 @@ Apify.main(async () => {
         const full_container = $('full-container').first().children();
 
         const date = full_container.find("div:contains(Dados relativos ao boletim da DGS de)").eq(2).find('g').last().text().trim()
-        const tested = full_container.eq(4).find('g').last().text().replace(/(\n|,| )/g, '');
+        const suspicious = full_container.eq(4).find('g').last().text().replace(/(\n|,| )/g, '');
         const infected = full_container.eq(1).find('g').last().text().replace(/(\n|,| )/g, '');
         const recovered = full_container.eq(2).find('g').last().text().replace(/(\n|,| )/g, '');
         const deceased = full_container.eq(3).find('g').last().text().replace(/(\n|,| )/g, '');
@@ -46,18 +46,19 @@ Apify.main(async () => {
         const infectedByRegion = getInfectedByRegion($ps);
 
         return {
-            date, tested, infected, recovered, deceased, infectedByRegion
+            date, suspicious, infected, recovered, deceased, infectedByRegion
         };
     });
 
-    let { date, tested, infected, recovered, deceased, infectedByRegion } = extracted;
+    let { date, suspicious, infected, recovered, deceased, infectedByRegion } = extracted;
     let sourceDate = new Date(formatDate(date));
 
 
-    // ADD: totalTested, infected, recovered, deaths
+    // ADD: suspicious, infected, recovered, deaths
     const data = {
         infected: infected || infected === '0' ? parseInt(infected) : 'N/A',
-        tested: tested || tested === '0' ? parseInt(tested) : 'N/A',
+        tested: 'N/A',
+        suspicious: suspicious || suspicious === '0' ? parseInt(suspicious) : 'N/A',
         recovered: recovered || recovered === '0' ? parseInt(recovered) : 'N/A',
         deceased: deceased || deceased === '0' ? parseInt(deceased) : null
     }
@@ -66,7 +67,6 @@ Apify.main(async () => {
     // ADD: infectedByRegion, lastUpdatedAtApify, lastUpdatedAtSource
     if (infectedByRegion && infectedByRegion.length) data.infectedByRegion = infectedByRegion;
     data.country = 'Portugal';
-    data.moreData = 'https://api.apify.com/v2/key-value-stores/NDqcdJ53aN730Kb1Q/records/LATEST?disableRedirect=true';
     data.historyData = 'https://api.apify.com/v2/datasets/VeXjF7u71PU8IO6NH/items?format=json&clean=1';
     data.sourceUrl = 'https://covid19.min-saude.pt/ponto-de-situacao-atual-em-portugal/';
     data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
