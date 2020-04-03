@@ -23,6 +23,7 @@ Apify.main(async () => {
     const cheerioCrawler = new Apify.CheerioCrawler({
         requestQueue,
         maxRequestRetries: 5,
+        requestTimeoutSecs: 60,
         useApifyProxy: true,
         additionalMimeTypes: ['text/plain'],
         handlePageFunction: async ({ request, $ }) => {
@@ -53,13 +54,14 @@ Apify.main(async () => {
             let latest = await kvStore.getValue(LATEST);
             if (!latest) {
                 await kvStore.setValue('LATEST', data);
-                latest = data;
+                latest = Object.assign({}, data);
             }
             delete latest.lastUpdatedAtApify;
             const actual = Object.assign({}, data);
             delete actual.lastUpdatedAtApify;
 
-            if (JSON.stringify(latest) !== JSON.stringify(actual)) {
+            const { itemCount } = await dataset.getInfo();
+            if (JSON.stringify(latest) !== JSON.stringify(actual) || itemCount === 0) {
                 await dataset.pushData(data);
             }
 
