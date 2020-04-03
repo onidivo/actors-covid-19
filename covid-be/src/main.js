@@ -11,9 +11,8 @@ Apify.main(async () => {
 
     log.info('Starting actor.');
 
-    const kvStore = await Apify.openKeyValueStore("COVID-19-Belgium");
-    const dataset = await Apify.openDataset("COVID-19-Belgium-HISTORY");
-    // const store = await Apify.openKeyValueStore('my-store');
+    const kvStore = await Apify.openKeyValueStore("COVID-19-BELGIUM");
+    const dataset = await Apify.openDataset("COVID-19-BELGIUM-HISTORY");
 
     const requestQueue = await Apify.openRequestQueue();
 
