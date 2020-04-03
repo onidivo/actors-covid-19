@@ -13,7 +13,6 @@ Apify.main(async () => {
 
     const kvStore = await Apify.openKeyValueStore("COVID-19-BELGIUM");
     const dataset = await Apify.openDataset("COVID-19-BELGIUM-HISTORY");
-    // const store = await Apify.openKeyValueStore('my-store');
 
     const requestQueue = await Apify.openRequestQueue();
 
