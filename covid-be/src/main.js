@@ -15,7 +15,6 @@ Apify.main(async () => {
     const dataset = await Apify.openDataset("COVID-19-BELGIUM-HISTORY");
 
     const requestQueue = await Apify.openRequestQueue();
-
     await requestQueue.addRequest({
         url: 'https://epistat.wiv-isp.be/covid',
         userData: {
@@ -27,6 +26,7 @@ Apify.main(async () => {
     const cheerioCrawler = new Apify.CheerioCrawler({
         requestQueue,
         maxRequestRetries: 5,
+        requestTimeoutSecs: 60,
         useApifyProxy: true,
         additionalMimeTypes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain'],
         prepareRequestFunction: async ({ request }) => {
@@ -85,17 +85,20 @@ Apify.main(async () => {
                     let latest = await kvStore.getValue(LATEST);
                     if (!latest) {
                         await kvStore.setValue('LATEST', data);
-                        latest = data;
+                        latest = Object.assign({}, data);
                     }
                     delete latest.lastUpdatedAtApify;
                     const actual = Object.assign({}, data);
                     delete actual.lastUpdatedAtApify;
 
-                    if (JSON.stringify(latest) !== JSON.stringify(actual)) {
+                    const { itemCount } = await dataset.getInfo();
+                    if (JSON.stringify(latest) !== JSON.stringify(actual) || itemCount === 0) {
                         await dataset.pushData(data);
                     }
+
                     await kvStore.setValue('LATEST', data);
                     await Apify.pushData(data);
+
                     log.info('Data saved.');
                     break;
                 default:
@@ -119,4 +122,3 @@ async function getSheetColumnSum(sheet, column) {
         return prev + cur[column];
     }, 0);
 }
-
