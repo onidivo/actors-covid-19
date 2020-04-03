@@ -66,7 +66,7 @@ Apify.main(async () => {
             await kvStore.setValue('LATEST', data);
             await Apify.pushData(data);
 
-            console.log('Done.');
+            log.info('Data saved.');
 
         },
         handleFailedRequestFunction: async ({ request }) => {

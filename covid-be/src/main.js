@@ -5,7 +5,7 @@ const { log } = Apify.utils;
 
 const LATEST = "LATEST";
 const now = new Date();
-const sourceUrl = 'https://epistat.wiv-isp.be/Covid/covid-19.html';
+const sourceUrl = 'https://epistat.wiv-isp.be/Covid';
 
 Apify.main(async () => {
 
@@ -18,7 +18,10 @@ Apify.main(async () => {
     const requestQueue = await Apify.openRequestQueue();
 
     await requestQueue.addRequest({
-        url: 'https://epistat.sciensano.be/Data/COVID19BE_20200402.xlsx'
+        url: 'https://epistat.wiv-isp.be/covid',
+        userData: {
+            label: 'GET_XLSX_LINK'
+        }
     })
 
     log.debug('Setting up crawler.');
@@ -26,62 +29,80 @@ Apify.main(async () => {
         requestQueue,
         maxRequestRetries: 5,
         useApifyProxy: true,
-        additionalMimeTypes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
-        prepareRequestFunction: async () => {
-            log.info(`Downloading xlsx file ...`);
+        additionalMimeTypes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain'],
+        prepareRequestFunction: async ({ request }) => {
+            if (request.url.endsWith('.xlsx')) {
+                log.info(`Proccecing ${request.url}`)
+                log.info(`Downloading xlsx file ...`)
+            };
         },
         handlePageFunction: async ({ request, $, body }) => {
-            log.info(`File had downloaded.`);
-            log.info(`Processing and saving data.`);
+            const { label } = request.userData;
+            switch (label) {
+                case 'GET_XLSX_LINK':
+                    log.info(`Proccecing ${request.url}`)
+                    log.info(`Getting xlsx download link.`)
+                    const $xlsxLink = $("#Data li").first().find('a').attr('href');
+                    await requestQueue.addRequest({
+                        url: $xlsxLink,
+                        userData: {
+                            label: 'EXTRACT_DATA'
+                        }
+                    })
+                    break;
+                case 'EXTRACT_DATA':
+                    log.info(`File had downloaded.`);
+                    log.info(`Processing and saving data.`);
+                    let workbook = XLSX.read(body, { type: "buffer" });
 
-            // const xlxsFile = await store.getValue('RESULTS');
-            let workbook = XLSX.read(body, { type: "buffer" });
+                    const { ModifiedDate } = workbook.Props;
+                    const atSource = new Date(ModifiedDate)
 
-            const { ModifiedDate } = workbook.Props;
-            const atSource = new Date(ModifiedDate)
+                    const CASES_AGESEX = XLSX.utils.sheet_to_json(workbook.Sheets['CASES_AGESEX']),
+                        CASES_MUNI = XLSX.utils.sheet_to_json(workbook.Sheets['CASES_MUNI']),
+                        CASES_MUNI_CUM = XLSX.utils.sheet_to_json(workbook.Sheets['CASES_MUNI_CUM']),
+                        HOSP = XLSX.utils.sheet_to_json(workbook.Sheets['HOSP']),
+                        MORT = XLSX.utils.sheet_to_json(workbook.Sheets['MORT']),
+                        TESTS = XLSX.utils.sheet_to_json(workbook.Sheets['TESTS']);
 
-            const CASES_AGESEX = XLSX.utils.sheet_to_json(workbook.Sheets['CASES_AGESEX']),
-                CASES_MUNI = XLSX.utils.sheet_to_json(workbook.Sheets['CASES_MUNI']),
-                CASES_MUNI_CUM = XLSX.utils.sheet_to_json(workbook.Sheets['CASES_MUNI_CUM']),
-                HOSP = XLSX.utils.sheet_to_json(workbook.Sheets['HOSP']),
-                MORT = XLSX.utils.sheet_to_json(workbook.Sheets['MORT']),
-                TESTS = XLSX.utils.sheet_to_json(workbook.Sheets['TESTS']);
+                    const data = {}
 
-            const data = {}
+                    data.infected = await getSheetColumnSum(CASES_AGESEX, 'CASES') || 'N/A';
+                    data.tasted = await getSheetColumnSum(TESTS, 'TESTS') || 'N/A';
+                    data.recovered = 'N/A';
+                    data.deaths = await getSheetColumnSum(MORT, 'DEATHS') || null;
+                    data.totalInToHospital = await getSheetColumnSum(HOSP, 'TOTAL_IN');
+                    data.totalHospitalized = await getSheetColumnSum(HOSP, 'NEW_IN');
+                    data.newlyOutOfHospital = await getSheetColumnSum(HOSP, 'NEW_OUT');
 
-            data.infected = await getSheetColumnSum(CASES_AGESEX, 'CASES') || 'N/A';
-            data.tasted = await getSheetColumnSum(TESTS, 'TESTS') || 'N/A';
-            data.recovered = 'N/A';
-            data.deaths = await getSheetColumnSum(MORT, 'DEATHS') || null;
-            data.totalInToHospital = await getSheetColumnSum(HOSP, 'TOTAL_IN') || 'N/A';
-            data.totalHospitalized = await getSheetColumnSum(HOSP, 'NEW_IN') || 'N/A';
-            data.newlyOutOfHospital = await getSheetColumnSum(HOSP, 'NEW_OUT') || 'N/A';
+                    data.country = 'Belgium';
+                    data.historyData = 'ttps://api.apify.com/v2/datasets/Up9jPMxFfTl9twVGM/items?format=json&clean=1.';
+                    data.sourceUrl = sourceUrl;
+                    data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
+                    data.lastUpdatedAtSource = new Date(Date.UTC(atSource.getFullYear(), atSource.getMonth(), atSource.getDate(), (atSource.getHours()), atSource.getMinutes())).toISOString();
+                    data.readMe = 'https://apify.com/onidivo/covid-be';
 
-            //ADD: sourceUrl, lastUpdatedAtSource, lastUpdatedAtApify, readMe
-            data.country = 'Belgium';
-            data.historyData = 'ttps://api.apify.com/v2/datasets/Up9jPMxFfTl9twVGM/items?format=json&clean=1.';
-            data.sourceUrl = sourceUrl;
-            data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
-            data.lastUpdatedAtSource = new Date(Date.UTC(atSource.getFullYear(), atSource.getMonth(), atSource.getDate(), (atSource.getHours()), atSource.getMinutes())).toISOString();
-            data.readMe = 'https://apify.com/onidivo/covid-be';
+                    // Push the data
+                    let latest = await kvStore.getValue(LATEST);
+                    if (!latest) {
+                        await kvStore.setValue('LATEST', data);
+                        latest = data;
+                    }
+                    delete latest.lastUpdatedAtApify;
+                    const actual = Object.assign({}, data);
+                    delete actual.lastUpdatedAtApify;
 
-            // Push the data
-            let latest = await kvStore.getValue(LATEST);
-            if (!latest) {
-                await kvStore.setValue('LATEST', data);
-                latest = data;
+                    if (JSON.stringify(latest) !== JSON.stringify(actual)) {
+                        await dataset.pushData(data);
+                    }
+                    await kvStore.setValue('LATEST', data);
+                    await Apify.pushData(data);
+                    log.info('Data saved.');
+                    break;
+                default:
+                    break;
             }
-            delete latest.lastUpdatedAtApify;
-            const actual = Object.assign({}, data);
-            delete actual.lastUpdatedAtApify;
 
-            if (JSON.stringify(latest) !== JSON.stringify(actual)) {
-                await dataset.pushData(data);
-            }
-
-            await kvStore.setValue('LATEST', data);
-            await Apify.pushData(data);
-            console.log('Done.');
         },
         handleFailedRequestFunction: async ({ request }) => {
             console.log(`Request ${request.url} failed many times.`);
