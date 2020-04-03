@@ -4,8 +4,10 @@ const { log } = Apify.utils;
 
 const LATEST = "LATEST";
 const now = new Date();
+const sourceUrl = 'http://ncov.mohw.go.kr/en';
 
 Apify.main(async () => {
+
     log.info('Starting actor.');
 
     const kvStore = await Apify.openKeyValueStore("COVID-19-SOUTH-KOREA");
@@ -14,10 +16,7 @@ Apify.main(async () => {
     const requestQueue = await Apify.openRequestQueue();
 
     await requestQueue.addRequest({
-        url: 'https://www.cdc.go.kr/board/board.es?mid=&bid=0030',
-        userData: {
-            label: 'START'
-        }
+        url: sourceUrl,
     })
 
     log.debug('Setting up crawler.');
@@ -34,93 +33,65 @@ Apify.main(async () => {
                 maxUsageCount: 5,
             },
         },
-        handlePageFunction: async ({ request, $ }) => {
+        handlePageFunction: async ({ request, $, body }) => {
             log.info(`Processing ${request.url}`);
-            const { label } = request.userData;
-            switch (label) {
-                case 'START':
-                    const $href = $('.dbody ul').first().find('a').attr('href');
-                    const list_no = new URLSearchParams($href).get('list_no');
-                    const bid = new URLSearchParams($href).get('bid');
-                    await requestQueue.addRequest({
-                        url: `https://www.cdc.go.kr/board/board.es?mid=&bid=${bid}`,
-                        uniqueKey: list_no,
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
-                        },
-                        userData: {
-                            label: 'DATA',
-                        },
-                        payload: `mid=&bid=${bid}&nPage=1&b_list=10&orderby=&dept_code=`
-                            + `&tag=&list_no=${list_no}&act=view&keyField=TITLE&keyWord=`
-                    });
-                    break;
-                case 'DATA':
-                    log.info(`Processing and saving data.`);
-                    let data = firstTable = secondTable = thirdTable = {};
+            log.info(`Processing and saving data.`);
+            const data = {};
 
-                    // First Table
-                    const firstIndex = await getTableIndex($
-                        , new RegExp(/period(.*)total(.*)positive(.*)being(.*)negative/g));
-                    if (typeof firstIndex === "number") {
-                        const firstTbody = $('#content_detail div.tb_contents tbody').eq(firstIndex);
-                        firstTable = await extractFirstTableData(firstTbody, $);
+            const $spans = $('.mps_list li div.mpsl_c span').toArray();
+
+            // ADD: total, infected, discharged, isolated, deceased, beingTested, testedNegative
+            ['infected', 'discharged', 'Isolated', 'deceased'].forEach((elem, i) => {
+                const value = $($spans).eq(i).text().replaceAll();
+                if (value || value === '0') {
+                    data[elem] = parseInt(value);
+                } else {
+                    if (elem === 'deceased') {
+                        data[elem] = null;
+                        return;
                     }
+                    data[elem] = 'N/A';
+                }
+            });
 
-                    // Third Table
-                    const thirdIndex = await getTableIndex($
-                        , new RegExp(/confirmed(.*)deaths(.*)fatality(.*)/g));
-                    if (typeof thirdIndex === "number") {
-                        const thirdTbody = $('#content_detail div.tb_contents tbody').eq(thirdIndex);
-                        thirdTable = await extractThirdTableData(thirdTbody, $);
-                    }
-                    const { infectedByAgeGroup } = thirdTable;
+            const testsPerformed = $('.misi_list div.misil_r').eq(0).text().replaceAll();
+            const testsConcluded = $('.misi_list div.misil_r').eq(1).text().replaceAll();
+            const positivityRate = $('.misi_list div.misil_r').eq(2).text().replaceAll();
+            if (testsPerformed) data.testsPerformed = parseInt(testsPerformed);
+            if (testsConcluded) data.testsConcluded = parseInt(testsConcluded);
+            if (positivityRate) data.positivityRate = positivityRate;
 
-                    // ADD: total, infected, discharged, isolated, deceased, beingTested, testedNegative
-                    Object.keys(firstTable).forEach(function (key) {
-                        data[key] = firstTable[key];
-                    });
+            // Source Date
+            const $text = $('.m_patient_status h3 em').text();
+            const dateSource = new Date(await formatDate($text));
 
-                    // ADD: deaths,infectedByRegion, infectedByAgeGroup
-                    if (infectedByAgeGroup && infectedByAgeGroup.length) data.infectedByAgeGroup = infectedByAgeGroup;
+            //ADD: sourceUrl, lastUpdatedAtSource, lastUpdatedAtApify, readMe
+            data.country = 'South Korea';
+            data.historyData = 'https://api.apify.com/v2/datasets/T43VVY5mDBeFMyRcn/items?format=json&clean=1';
+            data.sourceUrl = sourceUrl;
+            data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
+            data.lastUpdatedAtSource = new Date(Date.UTC(dateSource.getFullYear(), dateSource.getMonth(), dateSource.getDate(), (dateSource.getHours()), dateSource.getMinutes())).toISOString();
+            data.readMe = 'https://apify.com/onidivo/covid-kr';
 
-                    // Source Date
-                    const $sourceDate = $('ul[class="head info"] li:nth-child(1) b').text().trim();
-                    const $date = new Date($sourceDate)
-
-                    //ADD: sourceUrl, lastUpdatedAtSource, lastUpdatedAtApify, readMe
-                    data.country = 'South Korea';
-                    data.moreData = 'https://api.apify.com/v2/key-value-stores/TMFbhs7qtXpGpeaeP/records/LATEST?disableRedirect=true';
-                    data.historyData = 'https://api.apify.com/v2/datasets/T43VVY5mDBeFMyRcn/items?format=json&clean=1';
-                    data.sourceUrl = request.url;
-                    data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
-                    data.lastUpdatedAtSource = new Date(Date.UTC($date.getFullYear(), $date.getMonth(), $date.getDate(), ($date.getHours() - 9), $date.getMinutes())).toISOString();
-                    data.readMe = 'https://apify.com/onidivo/covid-kr';
-
-                    // Push the data
-                    let latest = await kvStore.getValue(LATEST);
-                    if (!latest) {
-                        await kvStore.setValue('LATEST', data);
-                        latest = data;
-                    }
-                    delete latest.lastUpdatedAtApify;
-                    const actual = Object.assign({}, data);
-                    delete actual.lastUpdatedAtApify;
-
-                    if (JSON.stringify(latest) !== JSON.stringify(actual)) {
-                        await dataset.pushData(data);
-                    }
-
-                    await kvStore.setValue('LATEST', data);
-                    await Apify.pushData(data);
-
-                    console.log('Done.');
-                    break
-                default:
-                    break;
+            // Push the data
+            let latest = await kvStore.getValue(LATEST);
+            if (!latest) {
+                await kvStore.setValue('LATEST', data);
+                latest = data;
             }
+            delete latest.lastUpdatedAtApify;
+            const actual = Object.assign({}, data);
+            delete actual.lastUpdatedAtApify;
+
+            if (JSON.stringify(latest) !== JSON.stringify(actual)) {
+                await dataset.pushData(data);
+            }
+
+            await kvStore.setValue('LATEST', data);
+            await Apify.pushData(data);
+
+            console.log('Done.');
+
         },
         handleFailedRequestFunction: async ({ request }) => {
             console.log(`Request ${request.url} failed many times.`);
@@ -133,60 +104,23 @@ Apify.main(async () => {
     log.info('Actor finished.');
 });
 
-async function getTableIndex($, regex) {
-    const tbodys = $('#content_detail div.tb_contents tbody').toArray();
-    let index = -1;
-    for (const tbody of tbodys) {
-        index++;
-        const innertext = $(tbody).find('tr').first().text().replace(/(\r|\n|,| )/g, '').toLowerCase();
-        if (regex.test(innertext)) return index;
-    }
+async function formatDate($text) {
+    const hour = $text.match(/((( \d{1,2}))|(\b(0?\d|1[0-2]):[0-5]\d))( |)(am|pm)/i)[0].trim();
+    const formatedHour = await formatHour(hour);
+    const month = $text
+        .match(/((?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Sept|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?))/i)[0].trim();
+    const day = $text.match(/( \d{1,2},)/g)[0].replace(/(,| )/g, '');
+    const year = $text.match(/\d{4}/g)[0];
+    return `${year}-${month}-${day} ${formatedHour}`;
 }
 
-async function extractFirstTableData(tbody, $) {
-    let $tds = $(tbody).find('tr').last().prev().find('td');
-    const fields = ['total', 'infected', 'discharged', 'isolated', 'deceased', 'beingTested', 'testedNegative'];
-    const result = {}
-    fields.forEach((field, i) => {
-        const value = $($tds).eq(i + 1).text().replaceAll();
-        if (value || value === '0') {
-            result[field] = parseInt(value);
-        }
-        else {
-            if (fields === 'deceased') {
-                result[field] = null;
-                return;
-            }
-            result[field] = 'N/A';
-        }
-    });
-    return result;
+async function formatHour(hour) {
+    const cycle = hour.match(/(pm|am)/i)[0].toLowerCase();
+    [a, ...others] = hour.replace(/(pm|am)/i, '').trim().split(':');
+    if (cycle === 'pm') return [parseInt(a) + 12, others, '00'].join(':');
+    return [parseInt(a), others, '00'].join(':');
 }
 
 String.prototype.replaceAll = function () {
-    return this.replace(/(,|\n|\r| )/g, '');
+    return this.replace(/(\n|\t|\r|,| )/g, '');
 };
-
-async function extractThirdTableData(tbody, $) {
-    const infectedByAgeGroup = [];
-    let deaths = null;
-
-    $(tbody).find('tr').toArray().forEach((tr, i) => {
-        let tds = $(tr).find('td');
-        let { length } = tds;
-        if (length === 6 || length === 7) {
-            if (i === 0) return;
-            if (i === 1) {
-                deaths = $(tds).eq(3).text().replaceAll();
-                return;
-            }
-            if (length === 7) tds = $(tds).slice(1);
-            infectedByAgeGroup.push({
-                key: $(tds).eq(0).text().trim(),
-                infected: parseInt($(tds).eq(1).text().replaceAll()),
-                deaths: parseInt($(tds).eq(3).text().replaceAll()),
-            })
-        }
-    });
-    return { deaths, infectedByAgeGroup };
-}
