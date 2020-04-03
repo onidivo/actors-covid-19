@@ -41,7 +41,7 @@ Apify.main(async () => {
             const $spans = $('.mps_list li div.mpsl_c span').toArray();
 
             // ADD: total, infected, discharged, isolated, deceased, beingTested, testedNegative
-            ['infected', 'discharged', 'Isolated', 'deceased'].forEach((elem, i) => {
+            ['infected', 'discharged', 'isolated', 'deceased'].forEach((elem, i) => {
                 const value = $($spans).eq(i).text().replaceAll();
                 if (value || value === '0') {
                     data[elem] = parseInt(value);

@@ -33,7 +33,7 @@ Apify.main(async () => {
             const $spans = $('div #maincounter-wrap span');
 
             data.infected = parseInt($($spans).eq(0).text().replace(/( |,)/g, '')) || 'N/A';
-            data.tasted = 'N/A'
+            data.tested = 'N/A'
             data.recovered = parseInt($($spans).eq(1).text().replace(/( |,)/g, '')) || 'N/A';
             data.deceased = parseInt($($spans).eq(2).text().replace(/( |,)/g, '')) || null;
 

@@ -68,7 +68,7 @@ Apify.main(async () => {
                     const data = {}
 
                     data.infected = await getSheetColumnSum(CASES_AGESEX, 'CASES') || 'N/A';
-                    data.tasted = await getSheetColumnSum(TESTS, 'TESTS') || 'N/A';
+                    data.tested = await getSheetColumnSum(TESTS, 'TESTS') || 'N/A';
                     data.recovered = 'N/A';
                     data.deaths = await getSheetColumnSum(MORT, 'DEATHS') || null;
                     data.totalInToHospital = await getSheetColumnSum(HOSP, 'TOTAL_IN');
