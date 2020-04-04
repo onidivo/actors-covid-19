@@ -69,7 +69,7 @@ Apify.main(async () => {
     if (infectedByRegion && infectedByRegion.length) data.infectedByRegion = infectedByRegion;
     data.country = 'Algeria';
     data.historyData = 'https://api.apify.com/v2/datasets/VeXjF7u71PU8IO6NH/items?format=json&clean=1';
-    data.sourceUrl = 'https://covid19.min-saude.pt/ponto-de-situacao-atual-em-portugal/';
+    data.sourceUrl = 'http://covid19.sante.gov.dz/carte';
     data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
     data.lastUpdatedAtSource = new Date(Date.UTC(sourceDate.getFullYear(), sourceDate.getMonth(), sourceDate.getDate(), sourceDate.getHours(), sourceDate.getMinutes())).toISOString();
     data.readMe = 'https://apify.com/onidivo/covid-dz';
