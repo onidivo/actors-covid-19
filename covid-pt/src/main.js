@@ -8,7 +8,7 @@ Apify.main(async () => {
     const kvStore = await Apify.openKeyValueStore('COVID-19-PT');
     const dataset = await Apify.openDataset('COVID-19-PY-HISTORY');
 
-    const browser = await Apify.launchPuppeteer({ useApifyProxy: true, apifyProxyGroups: ['SHADER'] });
+    const browser = await Apify.launchPuppeteer({ useApifyProxy: true });
     const page = await browser.newPage();
     await Apify.utils.puppeteer.injectJQuery(page);
     await Apify.utils.puppeteer.blockRequests(page, {
