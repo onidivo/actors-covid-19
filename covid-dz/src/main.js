@@ -13,35 +13,35 @@ Apify.main(async () => {
     const page = await browser.newPage();
     await Apify.utils.puppeteer.injectJQuery(page);
     await Apify.utils.puppeteer.blockRequests(page, {
-        urlPatterns: [".jpg", ".jpeg", ".png", ".svg", ".gif", ".woff", ".pdf", ".zip"]
+        urlPatterns: [".jpg", ".jpeg", ".png", ".svg", ".gif", ".woff", ".pdf", ".zip"
+            , '.pbf', '.woff2', '.woff']
     });
 
     await page.goto(sourceUrl, { waitUntil: 'networkidle0', timeout: 1000 * 600 });
-    await page.waitForSelector('full-container')
 
     const extracted = await page.evaluate(() => {
         function getInfectedByRegion($spans) {
             const infectedByRegion = [];
             for (const span of $spans) {
                 const text = $(span).text();
+                const matchs = text.match(/(\d,*)+/g)[0];
                 infectedByRegion.push({
-                    value: parseInt(text.match(/(\d|\/)+/g)[0]),
-                    region: text.match(/[a-z]+/gi)[0],
-                    newly: parseInt(text.match(/(\d|\/)+/g)[1]) || 0
+                    value: matchs[0] ? parseInt(matchs[0].replace(/,/g, '')) : 0,
+                    region: text.match(/([a-z '-]+)/gi).filter(el => el.trim() !== '')[0].replace(/-/g, ' ').trim(),
+                    newly: matchs[1] ? parseInt(matchs[1].replace(/,/g, '')) : 0
                 })
             }
             return infectedByRegion;
         }
 
-        const full_container = $('full-container').first().children();
+        const date = $("p:contains(Mise à jour)").text().match(/(\d|\/)+/g)[0];
 
-        const date = full_container.eq(2).text().match(/(\d|\/)+/g)[0];
-        const hospitalized = full_container.find("g:contains(Sous Traitement)").parents().eq(2).text().match(/(\d,*)+/g)[0].replace(/,/g, '');
-        const infected = full_container.find("g:contains(Cas confirmés)").parents().eq(2).text().match(/(\d,*)+/g)[0].replace(/(,)/g, '').replace(/,/g, '');
-        const recovered = full_container.find("g:contains(Rétablis)").parents().eq(2).text().match(/(\d,*)+/g)[0].replace(/(,)/g, '').replace(/,/g, '');
-        const deceased = full_container.find("g:contains(Décédés)").parents().eq(2).text().match(/(\d,*)+/g)[0].replace(/(,)/g, '').replace(/,/g, '');
+        const hospitalized = $("g:contains(Sous Traitement)").parents().eq(2).text().match(/(\d,*)+/g)[0].replace(/,/g, '');
+        const infected = $("g:contains(الحالات المؤكدة)").parents().eq(2).text().match(/(\d,*)+/g)[0].replace(/,/g, '');
+        const recovered = $("g:contains(Rétablis)").parents().eq(2).text().match(/(\d,*)+/g)[0].replace(/,/g, '');
+        const deceased = $("g:contains(Décédés)").parents().eq(2).text().match(/(\d,*)+/g)[0].replace(/,/g, '');
 
-        const $spans = full_container.eq(3).find('nav div.list-item-content').toArray();
+        const $spans = $("nav.feature-list").last().find('div.list-item-content').toArray();
 
         const infectedByRegion = getInfectedByRegion($spans);
 
