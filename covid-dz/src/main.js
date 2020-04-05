@@ -69,7 +69,7 @@ Apify.main(async () => {
     // ADD: infectedByRegion, lastUpdatedAtApify, lastUpdatedAtSource
     if (infectedByRegion && infectedByRegion.length) data.infectedByRegion = infectedByRegion;
     data.country = 'Algeria';
-    data.historyData = 'https://api.apify.com/v2/datasets/VeXjF7u71PU8IO6NH/items?format=json&clean=1';
+    data.historyData = 'https://api.apify.com/v2/datasets/hi0DJXpcyzDwtg2Fm/items?format=json&clean=1';
     data.sourceUrl = 'http://covid19.sante.gov.dz/carte';
     data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
     data.lastUpdatedAtSource = new Date(Date.UTC(sourceDate.getFullYear(), sourceDate.getMonth(), sourceDate.getDate(), sourceDate.getHours(), sourceDate.getMinutes())).toISOString();

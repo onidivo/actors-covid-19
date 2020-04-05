@@ -75,7 +75,7 @@ Apify.main(async () => {
                     data.newlyOutOfHospital = await getSheetColumnSum(HOSP, 'NEW_OUT');
 
                     data.country = 'Belgium';
-                    data.historyData = 'ttps://api.apify.com/v2/datasets/Up9jPMxFfTl9twVGM/items?format=json&clean=1.';
+                    data.historyData = 'https://api.apify.com/v2/datasets/DD9jrAixr0QMvQIE3/items?format=json&clean=1';
                     data.sourceUrl = sourceUrl;
                     data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
                     data.lastUpdatedAtSource = new Date(Date.UTC(atSource.getFullYear(), atSource.getMonth(), atSource.getDate(), (atSource.getHours()), atSource.getMinutes())).toISOString();
