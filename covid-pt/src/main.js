@@ -2,21 +2,22 @@ const Apify = require('apify');
 
 const LATEST = 'LATEST';
 const now = new Date();
+const { log } = Apify.utils;
+
 Apify.main(async () => {
     const url = 'https://esriportugal.maps.arcgis.com/apps/opsdashboard/index.html#/acf023da9a0b4f9dbb2332c13f635829';
 
-    const kvStore = await Apify.openKeyValueStore('COVID-19-PT');
-    const dataset = await Apify.openDataset('COVID-19-PY-HISTORY');
+    const kvStore = await Apify.openKeyValueStore('COVID-19-PORTUGAL');
+    const dataset = await Apify.openDataset('COVID-19-PORTUGAL-HISTORY');
 
     const browser = await Apify.launchPuppeteer({ useApifyProxy: true });
     const page = await browser.newPage();
     await Apify.utils.puppeteer.injectJQuery(page);
     await Apify.utils.puppeteer.blockRequests(page, {
-        urlPatterns: [".jpg", ".jpeg", ".png", ".svg", ".gif", ".woff", ".pdf", ".zip"]
+        urlPatterns: [".jpg", ".jpeg", ".png", ".svg", ".gif", ".woff", ".pdf", ".zip", '.pbf', '.woff2', '.woff']
     });
 
     await page.goto(url, { waitUntil: 'networkidle0', timeout: 1000 * 600 });
-    await page.waitForSelector('full-container')
 
     const extracted = await page.evaluate(() => {
         function getInfectedByRegion($ps) {
@@ -73,25 +74,29 @@ Apify.main(async () => {
     if (sourceDate != 'Invalid Date') data.lastUpdatedAtSource = new Date(Date.UTC(sourceDate.getFullYear(), sourceDate.getMonth(), sourceDate.getDate(), sourceDate.getHours(), sourceDate.getMinutes())).toISOString();
     data.readMe = 'https://apify.com/onidivo/covid-pt';
 
+    // Push the data
     let latest = await kvStore.getValue(LATEST);
     if (!latest) {
         await kvStore.setValue('LATEST', data);
-        latest = data;
+        latest = Object.assign({}, data);
     }
     delete latest.lastUpdatedAtApify;
     const actual = Object.assign({}, data);
     delete actual.lastUpdatedAtApify;
 
-    if (JSON.stringify(latest) !== JSON.stringify(actual)) {
+    const { itemCount } = await dataset.getInfo();
+    if (JSON.stringify(latest) !== JSON.stringify(actual) || itemCount === 0) {
         await dataset.pushData(data);
     }
 
     await kvStore.setValue('LATEST', data);
     await Apify.pushData(data);
 
-    console.log('Closing Puppeteer...');
+    log.info('Data saved.');
+
+    log.info('Closing Puppeteer...');
     await browser.close();
-    console.log('Done.');
+    log.info('Done.');
 });
 
 function formatDate(date) {
