@@ -23,12 +23,13 @@ Apify.main(async () => {
         function getInfectedByRegion($spans) {
             const infectedByRegion = [];
             for (const span of $spans) {
-                const text = $(span).text();
-                const matchs = text.match(/(\d,*)+/g);
+                const ps = $(span).find('p').toArray();
+                const oldCases = ps[0].textContent.match(/(\d,*)+/g);
+                const newCases = ps[1].textContent.match(/(\d,*)+/g);
                 infectedByRegion.push({
-                    value: matchs[0] ? parseInt(matchs[0].replace(/,/g, '')) : 0,
-                    region: text.match(/([a-z '-]+)/gi).filter(el => el.trim() !== '')[0].replace(/-/g, ' ').trim(),
-                    newly: matchs[1] ? parseInt(matchs[1].replace(/,/g, '')) : 0
+                    value: oldCases ? parseInt(oldCases[0].replace(/,/g, '')) : 0,
+                    region: ps[0].textContent.match(/([a-z '-]+)/gi).filter(el => el.trim() !== '')[0].replace(/-/g, ' ').trim(),
+                    newly: newCases ? parseInt(newCases[0].replace(/,/g, '')) : 0
                 })
             }
             return infectedByRegion;
