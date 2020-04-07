@@ -1,10 +1,11 @@
 // main.js
 const Apify = require('apify');
-const { log } = Apify.utils;
+const cheerio = require('cheerio');
+const { requestAsBrowser, log } = Apify.utils;
 
 const LATEST = "LATEST";
 const now = new Date();
-const sourceUrl = 'https://www.worldometers.info/coronavirus/country/iran';
+const sourceUrl = 'https://corona.ihio.gov.ir/';
 
 Apify.main(async () => {
 
@@ -14,40 +15,45 @@ Apify.main(async () => {
     const dataset = await Apify.openDataset("COVID-19-IRAN-HISTORY");
 
     const requestQueue = await Apify.openRequestQueue();
-
     await requestQueue.addRequest({
         url: sourceUrl,
+        headers: {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+            'Cookie': 'dnn_IsMobile=False; SplashPageView=true; language=fa-IR'
+        },
     })
-
-    log.debug('Setting up crawler.');
-    const cheerioCrawler = new Apify.CheerioCrawler({
+    const basicCrawler = new Apify.BasicCrawler({
         requestQueue,
+        useApifyProxy: true,
         maxRequestRetries: 5,
         requestTimeoutSecs: 60,
-        useApifyProxy: true,
-        additionalMimeTypes: ['text/plain'],
-        handlePageFunction: async ({ request, $ }) => {
-            log.info(`Processing ${request.url}`);
-            log.info(`Processing and saving data.`);
+        handleRequestFunction: async ({ request }) => {
+            const { url, headers } = request;
+            const response = await requestAsBrowser({
+                url,
+                headers: { ...headers },
+                ignoreSslErrors: false,
+                followRedirect: false,
+            });
+            const $ = cheerio.load(response.body);
+
+            log.info('Processing and saving data.')
             const data = {};
+            const $values = $("div.MainContainercounter div.mainCounternew h2").toArray();
+            if ($values.length !== 4) throw new Error('Page content changed');
 
-            const $spans = $('div #maincounter-wrap span');
-
-            data.infected = parseInt($($spans).eq(0).text().replace(/( |,)/g, '')) || 'N/A';
+            data.infected = parseInt($($values[1]).text().replace(/( |,)/g, ''));
             data.tested = 'N/A'
-            data.recovered = parseInt($($spans).eq(1).text().replace(/( |,)/g, '')) || 'N/A';
-            data.deceased = parseInt($($spans).eq(2).text().replace(/( |,)/g, '')) || null;
+            data.recovered = parseInt($($values[2]).text().replace(/( |,)/g, ''));
+            data.deceased = parseInt($($values[3]).text().replace(/( |,)/g, ''));
+            data.newCases = parseInt($($values[0]).text().replace(/( |,)/g, ''));
 
-            // Source Date
-            const $date = $(".content-inner div:contains(Last updated)").text();
-            const atSource = new Date($date.replace(/Last updated: /g, ''));
-
-            //ADD: sourceUrl, lastUpdatedAtSource, lastUpdatedAtApify, readMe
+            // ADD: country, historyData, sourceUrl, lastUpdatedAtSource, lastUpdatedAtApify, readMe
             data.country = 'Iran';
             data.historyData = 'https://api.apify.com/v2/datasets/PJEXhmQM0hkN8K3BK/items?format=json&clean=1';
             data.sourceUrl = sourceUrl;
             data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
-            data.lastUpdatedAtSource = new Date(Date.UTC(atSource.getFullYear(), atSource.getMonth(), atSource.getDate(), (atSource.getHours()), atSource.getMinutes())).toISOString();
+            data.lastUpdatedAtSource = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
             data.readMe = 'https://apify.com/onidivo/covid-ir';
 
             // Push the data
@@ -69,16 +75,18 @@ Apify.main(async () => {
             await Apify.pushData(data);
 
             log.info('Data saved.');
-
         },
         handleFailedRequestFunction: async ({ request }) => {
             console.log(`Request ${request.url} failed many times.`);
             console.dir(request)
         },
-    });
+    })
+
+    log.debug('Setting up crawler.');
+
     // Run the crawler and wait for it to finish.
     log.info('Starting the crawl.');
-    await cheerioCrawler.run();
+    await basicCrawler.run();
     log.info('Actor finished.');
 });
 
