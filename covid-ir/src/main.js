@@ -53,7 +53,7 @@ Apify.main(async () => {
             data.historyData = 'https://api.apify.com/v2/datasets/PJEXhmQM0hkN8K3BK/items?format=json&clean=1';
             data.sourceUrl = sourceUrl;
             data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
-            data.lastUpdatedAtSource = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
+            data.lastUpdatedAtSource = 'N/A';
             data.readMe = 'https://apify.com/onidivo/covid-ir';
 
             // Push the data
