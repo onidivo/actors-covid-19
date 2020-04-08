@@ -67,7 +67,7 @@ Apify.main(async () => {
 
             //ADD: sourceUrl, lastUpdatedAtSource, lastUpdatedAtApify, readMe
             data.country = 'South Korea';
-            data.historyData = 'https://api.apify.com/v2/datasets/T43VVY5mDBeFMyRcn/items?format=json&clean=1';
+            data.historyData = 'https://api.apify.com/v2/datasets/Lc0Hoa8MgAbscJA4w/items?format=json&clean=1';
             data.sourceUrl = sourceUrl;
             data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
             data.lastUpdatedAtSource = new Date(Date.UTC(dateSource.getFullYear(), dateSource.getMonth(), dateSource.getDate(), (dateSource.getHours()), dateSource.getMinutes())).toISOString();
