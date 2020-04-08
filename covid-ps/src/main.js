@@ -8,33 +8,31 @@ Apify.main(async () => {
 
     const kvStore = await Apify.openKeyValueStore('COVID-19-PALESTINE');
     const dataset = await Apify.openDataset('COVID-19-PALESTINE-HISTORY');
-
     const browser = await Apify.launchPuppeteer({ useApifyProxy: true });
     const page = await browser.newPage();
     await Apify.utils.puppeteer.injectJQuery(page);
     await Apify.utils.puppeteer.blockRequests(page, {
-        urlPatterns: [".jpg", ".jpeg", ".png", ".svg", ".gif", ".woff", ".pdf", ".zip"
-            , '.pbf', '.woff2', '.woff']
+        urlPatterns: [".jpg", ".jpeg", ".png", ".svg", ".gif", ".woff", ".pdf", ".zip", '.pbf', '.woff2', '.woff']
     });
+
     await page.goto(sourceUrl, { timeout: 1000 * 600 });
 
-    const selector = `document.querySelectorAll(('full-container.layout-reference full-container'))`
+    const query = `document.querySelectorAll('full-container full-container')`;
 
-    await page.waitForFunction(
-        `${selector}[0].innerText.includes('الاصابات المؤكدة التراكمية')`,
-        `${selector}[1].innerText.includes('الشفاء التام')`,
-        `${selector}[2].innerText.includes('الحالات المؤكدة حسب')`,
-        `${selector}[5].innerText.includes('الحجر المنزلي')`,
-        `${selector}[7].innerText.includes('عدد الوفيات')`,
-    );
+    await page.waitForFunction(`!!${query}[0] && !!${query}[1] && !!${query}[2] && !!${query}[5] && !!${query}[7]`
+        + ` && !!${query}[0].innerText.includes('الاصابات المؤكدة التراكمية')`
+        + ` && !!${query}[1].innerText.includes('الشفاء التام')`
+        + ` && !!${query}[2].innerText.includes('الحالات المؤكدة حسب')`
+        + ` && !!${query}[5].innerText.includes('الحجر المنزلي')`
+        + ` && !!${query}[7].innerText.includes('عدد الوفيات')`
+    )
 
     const extracted = await page.evaluate(async () => {
-
         async function strToInt(str) {
             return parseInt(str.replace(/( |,)/g, ''))
         }
 
-        const fullContainer = $('full-container.layout-reference full-container').toArray();
+        const fullContainer = $('full-container full-container').toArray();
 
         const infected = await strToInt($(fullContainer[0]).find('g').last().text().trim());
         const recovered = await strToInt($(fullContainer[1]).find('g').last().text().trim());
@@ -56,7 +54,6 @@ Apify.main(async () => {
             infected, recovered, deceased, atHome, infectedByRegion
         };
     });
-
     log.info('Processing and saving data.')
 
     // ADD: tested, infected, recovered, deceased, atHome, infectedByRegion
