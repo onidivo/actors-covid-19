@@ -65,7 +65,7 @@ Apify.main(async () => {
     //ADD: historyData, country, sourceUrl, lastUpdatedAtSource, lastUpdatedAtApify, readMe
     data.country = 'Palestine';
     data.historyData = 'https://api.apify.com/v2/datasets/BKpHLQrJPmgXE51tf/items?format=json&clean=1';
-    data.sourceUrl = sourceUrl;
+    data.sourceUrl = 'http://site.moh.ps';
     data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
     data.lastUpdatedAtSource = 'N/A';
     data.readMe = 'https://apify.com/onidivo/covid-ps';
