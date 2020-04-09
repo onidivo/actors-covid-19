@@ -17,61 +17,66 @@ Apify.main(async () => {
         urlPatterns: [".jpg", ".jpeg", ".png", ".svg", ".gif", ".woff", ".pdf", ".zip", '.pbf', '.woff2', '.woff']
     });
 
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 1000 * 600 });
+    await page.goto(url, { timeout: 1000 * 600 });
 
-    const extracted = await page.evaluate(() => {
-        function getInfectedByRegion($ps) {
-            const infectedByRegion = [];
-            for (const p of $ps) {
-                const value = $(p).find('strong').first().text().trim();
-                const key = $(p).find('strong').last().text().trim();
-                infectedByRegion.push({
-                    value: parseInt(value),
-                    region: key
-                })
-            }
-            return infectedByRegion;
+    const query = `document.querySelectorAll('full-container full-container')`;
+
+    await page.waitForFunction(`!!${query}[1] && !!${query}[2] && !!${query}[3] && !!${query}[4] && !!${query}[6] && !!${query}[13]`
+        + ` && !!${query}[1].innerText.includes('Confirmados')`
+        + ` && !!${query}[2].innerText.includes('Recuperados')`
+        + ` && !!${query}[3].innerText.includes('Óbitos')`
+        + ` && !!${query}[4].innerText.includes('Suspeitos')`
+        + ` && !!${query}[6].innerText.includes('Dados relativos ao boletim da DGS')`
+        + ` && !!${query}[13].innerText.includes('Casos Confirmados')`
+        + ` && !!${query}[13].innerHTML.includes('<nav class="feature-list">')`
+    )
+
+    const extracted = await page.evaluate(async () => {
+        async function strToInt(str) {
+            return parseInt(str.replace(/( |,)/g, ''))
         }
 
-        const full_container = $('full-container').first().children();
+        const fullContainer = $('full-container full-container').toArray();
 
-        const date = full_container.find("div:contains(Dados relativos ao boletim da DGS de)").eq(2).find('g').last().text().trim()
-        const suspicious = full_container.eq(4).find('g').last().text().replace(/(\n|,| )/g, '');
-        const infected = full_container.eq(1).find('g').last().text().replace(/(\n|,| )/g, '');
-        const recovered = full_container.eq(2).find('g').last().text().replace(/(\n|,| )/g, '');
-        const deceased = full_container.eq(3).find('g').last().text().replace(/(\n|,| )/g, '');
+        const date = $(fullContainer[6]).find('g').last().text().trim();
+        const suspicious = await strToInt($(fullContainer[4]).find('g').last().text().trim());
+        const infected = await strToInt($(fullContainer[1]).find('g').last().text().trim());
+        const recovered = await strToInt($(fullContainer[2]).find('g').last().text().trim());
+        const deceased = await strToInt($(fullContainer[3]).find('g').last().text().trim());
 
-        const $ps = full_container.eq(11).find('nav p').toArray();
+        const spans = $(fullContainer[13]).find('nav.feature-list span[id*="ember"]').toArray();;
 
-
-        const infectedByRegion = getInfectedByRegion($ps);
+        const infectedByRegion = [];
+        spans.forEach(async (span) => {
+            const strongs = $(span).find('strong')
+            infectedByRegion.push({
+                value: await strToInt(strongs[0].innerText),
+                region: strongs[1].innerText.trim(),
+            })
+        })
 
         return {
-            date, suspicious, infected, recovered, deceased, infectedByRegion
+            date, infected, recovered, deceased, suspicious, infectedByRegion
         };
     });
 
-    let { date, suspicious, infected, recovered, deceased, infectedByRegion } = extracted;
+    let { date } = extracted;
     let sourceDate = new Date(formatDate(date));
+    delete extracted.date;
 
-
-    // ADD: suspicious, infected, recovered, deaths
+    // ADD:  infected, recovered, deceased, suspicious, infectedByRegion
     const data = {
-        infected: infected || infected === '0' ? parseInt(infected) : 'N/A',
         tested: 'N/A',
-        suspicious: suspicious || suspicious === '0' ? parseInt(suspicious) : 'N/A',
-        recovered: recovered || recovered === '0' ? parseInt(recovered) : 'N/A',
-        deceased: deceased || deceased === '0' ? parseInt(deceased) : null
+        ...extracted
     }
 
 
     // ADD: infectedByRegion, lastUpdatedAtApify, lastUpdatedAtSource
-    if (infectedByRegion && infectedByRegion.length) data.infectedByRegion = infectedByRegion;
     data.country = 'Portugal';
     data.historyData = 'https://api.apify.com/v2/datasets/f1Qd4cMBzV1E0oRNc/items?format=json&clean=1';
     data.sourceUrl = 'https://covid19.min-saude.pt/ponto-de-situacao-atual-em-portugal/';
     data.lastUpdatedAtApify = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes())).toISOString();
-    if (sourceDate != 'Invalid Date') data.lastUpdatedAtSource = new Date(Date.UTC(sourceDate.getFullYear(), sourceDate.getMonth(), sourceDate.getDate(), sourceDate.getHours(), sourceDate.getMinutes())).toISOString();
+    data.lastUpdatedAtSource = new Date(Date.UTC(sourceDate.getFullYear(), sourceDate.getMonth(), sourceDate.getDate(), sourceDate.getHours(), sourceDate.getMinutes())).toISOString();
     data.readMe = 'https://apify.com/onidivo/covid-pt';
 
     // Push the data
