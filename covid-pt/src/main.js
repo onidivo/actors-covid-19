@@ -14,7 +14,7 @@ async function waitForContentToLoad(page) {
         + ` && !!${query}[4].innerText.includes('Suspeitos')`
         + ` && !!${query}[6].innerText.includes('Dados relativos ao boletim da DGS')`
         + ` && !!${query}[13].innerText.includes('Casos Confirmados')`
-        + ` && !!${query}[13].innerHTML.includes('<nav class="feature-list">')`, { timeout: 40 });
+        + ` && !!${query}[13].innerHTML.includes('<nav class="feature-list">')`, { timeout: 40 * 1000 });
 }
 
 Apify.main(async () => {
