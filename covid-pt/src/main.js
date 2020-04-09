@@ -7,14 +7,14 @@ const { log } = Apify.utils;
 async function waitForContentToLoad(page) {
     const query = 'document.querySelectorAll(\'full-container full-container\')';
 
-    await page.waitForFunction(`!!${query}[1] && !!${query}[2] && !!${query}[3] && !!${query}[4] && !!${query}[6] && !!${query}[13]`
+    return page.waitForFunction(`!!${query}[1] && !!${query}[2] && !!${query}[3] && !!${query}[4] && !!${query}[6] && !!${query}[13]`
         + ` && !!${query}[1].innerText.includes('Confirmados')`
         + ` && !!${query}[2].innerText.includes('Recuperados')`
         + ` && !!${query}[3].innerText.includes('Óbitos')`
         + ` && !!${query}[4].innerText.includes('Suspeitos')`
         + ` && !!${query}[6].innerText.includes('Dados relativos ao boletim da DGS')`
         + ` && !!${query}[13].innerText.includes('Casos Confirmados')`
-        + ` && !!${query}[13].innerHTML.includes('<nav class="feature-list">')`, { timeout: 40 * 1000 });
+        + ` && !!${query}[13].innerHTML.includes('<nav class="feature-list">')`, { timeout: 45 * 1000 });
 }
 
 Apify.main(async () => {
@@ -36,11 +36,11 @@ Apify.main(async () => {
         },
         handlePageTimeoutSecs: 90,
         launchPuppeteerFunction: () => {
-            const options = { useApifyProxy: true, useChrome: !Apify.isAtHome() };
-            if (!options.useChrome) {
-                options.headless = true;
-                options.stealth = true;
-            }
+            const options = { useApifyProxy: true, useChrome: true };
+            // if (Apify.isAtHome()) {
+            //     options.headless = true;
+            //     options.stealth = true;
+            // }
             return Apify.launchPuppeteer(options);
         },
         gotoFunction: async ({ page, request }) => {
@@ -55,6 +55,7 @@ Apify.main(async () => {
             await Apify.utils.puppeteer.injectJQuery(page);
             log.info('Waiting for content to load');
             await waitForContentToLoad(page);
+            log.info('Content loaded');
 
             const extracted = await page.evaluate(async () => {
                 async function strToInt(str) {
