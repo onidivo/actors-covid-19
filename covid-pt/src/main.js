@@ -14,7 +14,7 @@ async function waitForContentToLoad(page) {
         + ` && !!${query}[4].innerText.includes('Suspeitos')`
         + ` && !!${query}[6].innerText.includes('Dados relativos ao boletim da DGS')`
         + ` && !!${query}[13].innerText.includes('Casos Confirmados')`
-        + ` && !!${query}[13].innerHTML.includes('<nav class="feature-list">')`);
+        + ` && !!${query}[13].innerHTML.includes('<nav class="feature-list">')`, { timeout: 40 });
 }
 
 Apify.main(async () => {
@@ -25,6 +25,8 @@ Apify.main(async () => {
 
     const requestList = new Apify.RequestList({ sources: [{ url }] });
     await requestList.initialize();
+
+    let criticalErrors = 0;
 
     const crawler = new Apify.PuppeteerCrawler({
         requestList,
@@ -45,12 +47,13 @@ Apify.main(async () => {
             await Apify.utils.puppeteer.blockRequests(page, {
                 urlPatterns: ['.jpg', '.jpeg', '.png', '.svg', '.gif', '.woff', '.pdf', '.zip', '.pbf', '.woff2', '.woff'],
             });
-            try { await page.goto(request.url, { timeout: 1000 * 30 }); } catch (e) {}
+            return page.goto(request.url, { timeout: 1000 * 30 });
         },
         handlePageFunction: async ({ page, request }) => {
             log.info(`Handling ${request.url}`);
 
             await Apify.utils.puppeteer.injectJQuery(page);
+            log.info('Waiting for content to load');
             await waitForContentToLoad(page);
 
             const extracted = await page.evaluate(async () => {
@@ -125,8 +128,14 @@ Apify.main(async () => {
 
             log.info('Data saved.');
         },
+        handleFailedRequestFunction: ({ requst, error }) => {
+            criticalErrors++;
+        },
     });
     await crawler.run();
+    if (criticalErrors > 0) {
+        throw new Error('Some essential requests failed completely!');
+    }
     log.info('Done.');
 });
 
