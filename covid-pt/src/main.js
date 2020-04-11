@@ -79,12 +79,14 @@ Apify.main(async () => {
 
                 const infectedByRegion = [];
                 for (const span of spans) {
-                    const strongs = $(span).find('strong');
+                    const text = $(span).text().trim()
+                    const [value] = text.match(/(\d|,)+/g);
                     infectedByRegion.push({
-                        value: await strToInt(strongs[0].innerText),
-                        region: strongs[1].innerText.trim(),
+                        value: await strToInt(value.replace(/ |,/g, '')),
+                        region: text.replace(/(\d|,)+/g, '').trim(),
                     });
                 }
+
 
                 return {
                     date, infected, recovered, deceased, suspicious, infectedByRegion,
