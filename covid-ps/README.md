@@ -1,7 +1,7 @@
 
 Coronavirus stats in the Palestine
 
-Actor gets an actual number of examined and infected people in the Palestine from https://corona.ps
+Actor gets an actual number of examined and infected people in the Palestine from http://site.moh.ps
 
 Latest data are available at this URL: https://api.apify.com/v2/key-value-stores/SbribCOVf2wgR868y/records/LATEST?disableRedirect=true.
 
