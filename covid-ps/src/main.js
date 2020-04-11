@@ -137,7 +137,7 @@ Apify.main(async () => {
 });
 
 async function getDateFromString(str) {
-    const date = new Date();
+    const date = new Date(now);
     if (str.toLowerCase().includes('second')) {
         return date;
     }
