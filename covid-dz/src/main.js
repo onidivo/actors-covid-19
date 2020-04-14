@@ -65,10 +65,10 @@ Apify.main(async () => {
 
                 const date = $(fullContainer[2]).text().match(/(\d|\/)+/g)[0];
 
-                const hospitalized = await strToInt($(fullContainer[11]).text().match(/(\d|,)+/g)[0]);
+                const hospitalized = await strToInt($(fullContainer[12]).text().match(/(\d|,)+/g)[0]);
                 const infected = await strToInt($(fullContainer[0]).text().match(/(\d|,)+/g)[0]);
-                const recovered = await strToInt($(fullContainer[10]).text().match(/(\d|,)+/g)[0]);
-                const deceased = await strToInt($(fullContainer[12]).text().match(/(\d|,)+/g)[0]);
+                const recovered = await strToInt($(fullContainer[11]).text().match(/(\d|,)+/g)[0]);
+                const deceased = await strToInt($(fullContainer[13]).text().match(/(\d|,)+/g)[0]);
 
                 const spans = $(fullContainer[3]).find('nav.feature-list span[id*="ember"]').toArray();
 
