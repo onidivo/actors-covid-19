@@ -93,7 +93,7 @@ Apify.main(async () => {
                 };
             });
             if (!extracted) {
-                log.info('No data found in the page.')
+                log.info('Unavailable source data, maybe Update or maintenance purpose.')
                 return;
             }
 
