@@ -7,13 +7,13 @@ const { log } = Apify.utils;
 async function waitForContentToLoad(page) {
     const query = 'document.querySelectorAll(\'full-container full-container\')';
 
-    return page.waitForFunction(`!!${query}[0] && !!${query}[2] && !!${query}[3] && !!${query}[10] && !!${query}[11] && !!${query}[12]`
+    return page.waitForFunction(`!!document.querySelector('#appInfo div') || (!!${query}[0] && !!${query}[2] && !!${query}[3] && !!${query}[10] && !!${query}[11] && !!${query}[12]`
         + ` && !!${query}[0].innerText.includes('الحالات المؤكدة')`
         + ` && !!${query}[2].innerText.includes('Mise à jour')`
         + ` && !!${query}[3].innerHTML.includes('<nav class="feature-list">')`
         + ` && !!${query}[10].innerText.includes('حالة شفاء')`
         + ` && !!${query}[11].innerText.includes('تحت العلاج')`
-        + ` && !!${query}[12].innerText.includes('حالة وفاة')`, { timeout: 45 * 1000 });
+        + ` && !!${query}[12].innerText.includes('حالة وفاة'))`, { timeout: 45 * 1000 });
 }
 
 Apify.main(async () => {
@@ -57,6 +57,9 @@ Apify.main(async () => {
             log.info('Content loaded');
 
             const extracted = await page.evaluate(async () => {
+
+                if ($('#appInfo').innerText) return;
+
                 async function strToInt(str) {
                     return parseInt(str.replace(/( |,)/g, ''), 10);
                 }
@@ -89,7 +92,10 @@ Apify.main(async () => {
                     date, infected, hospitalized, recovered, deceased, infectedByRegion,
                 };
             });
-
+            if (!extracted) {
+                log.info('No data found in the page.')
+                return;
+            }
 
             let sourceDate = new Date(await formatDate(extracted.date));
             delete extracted.date;
