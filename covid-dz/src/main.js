@@ -8,7 +8,7 @@ async function waitForContentToLoad(page) {
     const query = 'document.querySelector(\'full-container\').innerText.includes';
 
     return page.waitForFunction(
-        `!!document.querySelector('#appInfo div') || (!!document.querySelector('full-container full-container')
+        `!!document.title.includes('Sign In') || (!!document.querySelector('full-container full-container')
         && ${query}('الحالات المؤكدة') && ${query}('حالة شفاء') && ${query}('تحت العلاج') && ${query}('حالة وفاة')
         && !!document.querySelectorAll('nav.feature-list')[1])`
         , { timeout: 45 * 1000 });
@@ -53,7 +53,7 @@ Apify.main(async () => {
 
             const extracted = await page.evaluate(async () => {
 
-                if ($('#appInfo').innerText) return;
+                if (document.title === 'Sign In') return;
 
                 async function strToInt(str) {
                     return parseInt(str.replace(/( |,)/g, ''), 10);
@@ -86,7 +86,7 @@ Apify.main(async () => {
                 };
             });
             if (!extracted) {
-                log.info('Unavailable source data, maybe Update or maintenance purpose.')
+                log.info('Unavailable source data, maybe for update or maintenance purpose.')
                 return;
             }
 
