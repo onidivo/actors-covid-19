@@ -60,12 +60,12 @@ Apify.main(async () => {
                 }
                 const text = $('full-container full-container').text().replace(/(\n|\r)/g, '').trim()
 
-                const date = text.match(/(Mise à jour)(.*)(\/\d+)/g)[0].match(/(\d|\/)+/g)[0];
+                const date = text.match(/(?<=Mise à jour(.)*)[\d\/]+/g)[0];
 
-                const hospitalized = await strToInt(text.match(/(تحت العلاج)( )*(\d|,)+/g)[0].match(/(\d|,)+/g)[0]);
-                const infected = await strToInt(text.match(/(الحالات المؤكدة)( )*(\d|,)+/g)[0].match(/(\d|,)+/g)[0]);
-                const recovered = await strToInt(text.match(/(حالة شفاء)( )*(\d|,)+/g)[0].match(/(\d|,)+/g)[0]);
-                const deceased = await strToInt(text.match(/(Décès-حالة وفاة)( )*(\d|,)+/g)[0].match(/(\d|,)+/g)[0]);
+                const hospitalized = await strToInt(text.match(/(?<=تحت العلاج\s*)[\d,]+/g)[0]);
+                const infected = await strToInt(text.match(/(?<=الحالات المؤكدة\s*)[\d,]+/g)[0]);
+                const recovered = await strToInt(text.match(/(?<=حالة شفاء\s*)[\d,]+/g)[0]);
+                const deceased = await strToInt(text.match(/(?<=حالة وفاة\s*)[\d,]+/g)[0]);
 
                 const spans = $($('nav.feature-list')[1]).find('span[class*="ember"]').toArray();
 
